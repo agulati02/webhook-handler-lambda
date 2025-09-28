@@ -1,16 +1,21 @@
 import json
-import urllib.parse
-from base64 import b64decode
+import asyncio
+from repo_handler import RepositoryHandler
 
-
-def lambda_handler(event, context):
+async def lambda_handler(event, context):
     """
     Receives the GitHub webhook call and orchestrates the code review process  
     """
     try:
+        repo_handler = RepositoryHandler(connection_timeout=10.0)
+
         # Decode the incoming payload
         payload = json.loads(event['body'])
-        print(f"Received payload: {json.dumps(payload, indent=2)}")
+        diff_url = payload['pull_request']['diff_url']
+
+        # Fetch the PR diff
+        response = await repo_handler.get_pr_diff(diff_url)
+        print(response)
 
         return {
             'statusCode': 200,
