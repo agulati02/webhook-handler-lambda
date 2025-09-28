@@ -1,0 +1,35 @@
+name: Deploy Source to Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy: 
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: Zip source code
+        run: zip -r function.zip .
+
+      - name: Deploy to AWS Lambda
+        uses: imehedi/actions-awscli-v2@latest
+        with:
+          args: "lambda update-function-code \
+            --function-name arn:aws:lambda:ap-southeast-2:890742586584:function:orchestrate_agentic_code_review \
+            --zip-file fileb://function.zip \
+            --region ap-southeast-2"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: 'ap-southeast-2'
