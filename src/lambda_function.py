@@ -8,37 +8,9 @@ def lambda_handler(event, context):
     Receives the GitHub webhook call and orchestrates the code review process  
     """
     try:
-        print(event)
-        # # Decode base64 body and convert bytes to string
-        # event_body_decoded = b64decode(event['body']).decode('utf-8')
-        
-        # # URL decode the payload
-        # payload = urllib.parse.unquote(event_body_decoded)
-
-        # # Remove 'payload=' prefix if present
-        # if payload.startswith('payload='):
-        #     payload = payload[8:]
-
-        # # Parse JSON payload
-        # payload_dict = json.loads(payload)
-        
-        # # Extract repository information
-        # repository_name = payload_dict['repository']['name']
-        # print(f"Repository name: {repository_name}")
-
-        # count_of_stars = payload_dict['repository']['stargazers_count']
-        # print(f"Count of stars: {count_of_stars}")
-
-        # # Extract sender information
-        # starring_user = payload_dict['sender']['login']
-        # print(f"Starring user: {starring_user}")
-
-        # starring_user_url = payload_dict['sender']['html_url']
-        # print(f"Starring user profile URL: {starring_user_url}")
-
-        # # Get the action type to understand what triggered the webhook
-        # action = payload_dict.get('action', 'unknown')
-        # print(f"Webhook action: {action}")
+        # Decode the incoming payload
+        payload = json.loads(event['body'])
+        print(f"Received payload: {json.dumps(payload, indent=2)}")
 
         return {
             'statusCode': 200,
