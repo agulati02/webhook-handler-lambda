@@ -1,4 +1,5 @@
 from httpx import AsyncClient
+from .token_manager import TokenManager
 
 
 class RepositoryHandler:
@@ -18,3 +19,19 @@ class RepositoryHandler:
         response = await self.client.get(diff_url, follow_redirects=True)
         response.raise_for_status()
         return response.text
+    
+    async def post_greeting_comment(self, comments_url: str, installation_id: int) -> dict:
+        jwt_token = TokenManager.get_jwt_token()
+        access_token = TokenManager.get_installation_access_token(jwt_token, installation_id)
+
+        headers = {
+            'Authorization': f'token {access_token}',
+            'Accept': 'application/vnd.github+json'
+        }
+        payload = {
+            'body': "Hey there! Thanks for the PR! \n Let me review the code and get back to you shortly. 🤓"
+        }
+
+        response = await self.client.post(comments_url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()

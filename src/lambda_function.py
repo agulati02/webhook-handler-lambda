@@ -5,7 +5,7 @@ import json
 import asyncio
 
 import logging
-from src.repo_handler import RepositoryHandler
+from .repo_handler import RepositoryHandler
 
 def lambda_handler(event, context):
     """
