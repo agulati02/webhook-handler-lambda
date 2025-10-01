@@ -5,31 +5,111 @@ on:
     branches:
       - main
 
+env:
+  AWS_REGION: ap-southeast-2
+  PYTHON_VERSION: '3.13'
+  LAMBDA_FUNCTION_NAME: orchestrate_agentic_code_review
+  LAYER_NAME: code-reviewer-dependencies
+
 jobs:
   deploy: 
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -t python/
 
-      - name: Zip source code
-        run: zip -r function.zip .
-
-      - name: Deploy to AWS Lambda
-        uses: imehedi/actions-awscli-v2@latest
-        with:
-          args: "lambda update-function-code \
-            --function-name arn:aws:lambda:ap-southeast-2:890742586584:function:orchestrate_agentic_code_review \
-            --zip-file fileb://function.zip \
-            --region ap-southeast-2"
+      - name: Create Lambda Layer
+        run: |
+          zip -r layer.zip python/
+          
+      - name: Get current layer version
+        id: get-layer
+        run: |
+          LAYER_VERSION=$(aws lambda list-layer-versions \
+            --layer-name ${{ env.LAYER_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'LayerVersions[0].Version' \
+            --output text 2>/dev/null || echo "0")
+          echo "current_version=$LAYER_VERSION" >> $GITHUB_OUTPUT
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: 'ap-southeast-2'
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Publish Lambda Layer
+        id: publish-layer
+        run: |
+          LAYER_ARN=$(aws lambda publish-layer-version \
+            --layer-name ${{ env.LAYER_NAME }} \
+            --zip-file fileb://layer.zip \
+            --compatible-runtimes python${{ env.PYTHON_VERSION }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'LayerVersionArn' \
+            --output text)
+          echo "layer_arn=$LAYER_ARN" >> $GITHUB_OUTPUT
+          echo "Published layer: $LAYER_ARN"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda function layer
+        run: |
+          aws lambda update-function-configuration \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --layers ${{ steps.publish-layer.outputs.layer_arn }} \
+            --region ${{ env.AWS_REGION }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Zip source code
+        run: |
+          zip -r function.zip src/ -x "*.pyc" -x "*__pycache__*" -x "*.git*"
+
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --zip-file fileb://function.zip \
+            --region ${{ env.AWS_REGION }}
+          
+          # Wait for update to complete
+          aws lambda wait function-updated \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --region ${{ env.AWS_REGION }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}
+
+      - name: Verify deployment
+        run: |
+          FUNCTION_STATUS=$(aws lambda get-function \
+            --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'Configuration.State' \
+            --output text)
+          echo "Function state: $FUNCTION_STATUS"
+          if [ "$FUNCTION_STATUS" != "Active" ]; then
+            echo "⚠️ Warning: Function is not in Active state"
+            exit 1
+          fi
+          echo "✅ Deployment successful!"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ env.AWS_REGION }}

@@ -1,1 +1,6 @@
 httpx
+python-dotenv
+PyJWT
+requests
+cryptography
+pytest
