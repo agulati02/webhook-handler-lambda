@@ -4,3 +4,4 @@ PyJWT
 requests
 cryptography
 pytest
+boto3

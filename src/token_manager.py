@@ -1,14 +1,21 @@
 import jwt
 import requests
 from datetime import datetime, timedelta, timezone
-from .config import GITHUB_PRIVATE_KEY_PATH, CLIENT_ID, JWT_ALGORITHM
+from .config import GITHUB_PRIVATE_KEY_PATH, CLIENT_ID, JWT_ALGORITHM, ENV
+from .clients import get_ssm_client
 
 class TokenManager:
 
     @staticmethod
     def get_jwt_token() -> str:
-        with open(GITHUB_PRIVATE_KEY_PATH, 'r') as key_file:
-            private_key = key_file.read()
+        private_key = None
+        if ENV.lower() == 'local':
+            with open(GITHUB_PRIVATE_KEY_PATH, 'r') as key_file:
+                private_key = key_file.read()
+        else:
+            ssm_client = get_ssm_client()
+            parameter = ssm_client.get_parameter(Name=GITHUB_PRIVATE_KEY_PATH, WithDecryption=True)
+            private_key = parameter['Parameter']['Value']
 
         payload = {
             'iat': int(datetime.now(timezone.utc).timestamp()),
