@@ -7,3 +7,4 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), 'resources', f'.
 GITHUB_PRIVATE_KEY_PATH = os.getenv('GITHUB_PRIVATE_KEY_PATH')
 CLIENT_ID = 'Iv23liHKhbBXLoJvAoC7'
 JWT_ALGORITHM = 'RS256'
+AWS_REGION_NAME = os.getenv('AWS_REGION_NAME', 'ap-southeast-2')

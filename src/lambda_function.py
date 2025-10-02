@@ -16,7 +16,12 @@ def lambda_handler(event, context):
         diff_url = payload['pull_request']['diff_url']
 
         repo_handler = RepositoryHandler(connection_timeout=10.0)
-        response = asyncio.run(repo_handler.get_pr_diff(diff_url))
+        response = asyncio.run(
+            repo_handler.post_greeting_comment(
+                comments_url=payload['pull_request']['comments_url'], 
+                installation_id=payload['installation']['id']
+            )
+        )
 
         return {
             'statusCode': 200,
