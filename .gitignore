@@ -2,4 +2,4 @@ secrets
 .venv
 .vscode
 *.pem
-__*cache*__
+*cache*
