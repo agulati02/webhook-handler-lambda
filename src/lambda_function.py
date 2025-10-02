@@ -16,7 +16,7 @@ def lambda_handler(event, context):
         diff_url = payload['pull_request']['diff_url']
 
         repo_handler = RepositoryHandler(connection_timeout=10.0)
-        response = asyncio.run(
+        asyncio.run(
             repo_handler.post_greeting_comment(
                 comments_url=payload['pull_request']['comments_url'], 
                 installation_id=payload['installation']['id']
@@ -25,7 +25,7 @@ def lambda_handler(event, context):
 
         return {
             'statusCode': 200,
-            'body': response
+            'body': 'PR review process initiated successfully.'
         }
     
     except KeyError as e:
