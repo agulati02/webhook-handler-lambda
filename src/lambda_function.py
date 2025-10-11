@@ -6,7 +6,8 @@ import asyncio
 import logging
 
 from .repo_handler import RepositoryHandler
-from .dto import UserAction
+from .dto import UserAction, Event
+from .constants import AppConstants
 
 
 def lambda_handler(event, context):
@@ -15,10 +16,12 @@ def lambda_handler(event, context):
     """
     try:
         payload = json.loads(event['body'])
-        action = classify_user_action(payload)
+        action = classify_user_action(payload, event['headers'])
 
         if action == UserAction.REVIEW_REQUESTED:
             return handle_review_request(payload)
+        elif action == UserAction.DISCUSSION_COMMENT:
+            return handle_discussion_comment(payload)
         
         return {
             'statusCode': 200,
@@ -46,6 +49,26 @@ def lambda_handler(event, context):
             'body': str(e)
         }
 
+def classify_user_action(payload: dict, headers: dict) -> UserAction:
+    if headers.get('X-GitHub-Event') not in Event._value2member_map_:
+        return UserAction.UNKNOWN
+    
+    event = Event(headers['X-GitHub-Event'])
+    action = payload['action']
+    
+    if event == Event.PULL_REQUEST and action == 'review_requested':
+        reviewers = [
+            reviewer['login'] 
+            for reviewer in payload['pull_request']['requested_reviewers']
+        ]
+        return UserAction.REVIEW_REQUESTED if AppConstants.TGRAFY in reviewers else UserAction.UNKNOWN
+    
+    if event == Event.ISSUE_COMMENT and action in ['created', 'edited']:
+        comment_body = payload['comment']['body'].strip().lower()
+        return UserAction.DISCUSSION_COMMENT if f'@{AppConstants.TGRAFY}' in comment_body else UserAction.UNKNOWN
+
+    return UserAction.UNKNOWN
+
 def handle_review_request(payload: dict) -> dict:
     repo_handler = RepositoryHandler(connection_timeout=10.0)
     asyncio.run(
@@ -54,17 +77,15 @@ def handle_review_request(payload: dict) -> dict:
             installation_id=payload['installation']['id']
         )
     )
+    # TODO: Push to SQS for async processing
     return {
         'statusCode': 200,
         'body': 'PR review process initiated successfully.'
     }
 
-def classify_user_action(payload: dict) -> UserAction:
-    action = payload['action']
-    reviewers = [
-        reviewer['login'] 
-        for reviewer in payload['pull_request']['requested_reviewers']
-    ]
-    if action == 'review_requested' and 'tgrafy' in reviewers:
-        return UserAction.REVIEW_REQUESTED
-    return UserAction.UNKNOWN
+def handle_discussion_comment(payload: dict) -> dict:
+    # TODO: Push to SQS for async processing
+    return {
+        'statusCode': 200,
+        'body': 'Discussion comment received. No action taken yet.'
+    }
