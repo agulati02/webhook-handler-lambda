@@ -18,7 +18,7 @@ def lambda_handler(event, context):
         payload = json.loads(event['body'])
         action = classify_user_action(payload, event['headers'])
 
-        print(f"Received event: {event['headers'].get('x-github-event', 'unknown')} with action: {action.value}")
+        logging.info(f"Received event: {event['headers'].get('x-github-event', 'unknown')} with action: {action.value}")
 
         if action == UserAction.REVIEW_REQUESTED:
             return handle_review_request(payload)
