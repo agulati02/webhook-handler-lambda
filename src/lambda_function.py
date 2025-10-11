@@ -67,7 +67,7 @@ def classify_user_action(payload: dict, headers: dict) -> UserAction:
     
     if event == Event.ISSUE_COMMENT and action in ['created', 'edited']:
         comment_body = payload['comment']['body'].strip().lower()
-        return UserAction.DISCUSSION_COMMENT if f'@{AppConstants.TGRAFY}' in comment_body else UserAction.UNKNOWN
+        return UserAction.DISCUSSION_COMMENT if f'@{AppConstants.TGRAFY.value}' in comment_body else UserAction.UNKNOWN
 
     return UserAction.UNKNOWN
 
