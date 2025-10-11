@@ -11,7 +11,7 @@ def test_classify_user_action_review_requested():
         },
         "installation": {"id": 12345}
     }
-    headers = {"X-GitHub-Event": "pull_request"}
+    headers = {"x-github-event": "pull_request"}
     
     action = classify_user_action(payload, headers)
     assert action == "review_requested"
@@ -22,14 +22,14 @@ def test_classify_user_action_discussion_comment():
         "comment": {"body": "Hello @tgrafy, please review this."},
         "installation": {"id": 12345}
     }
-    headers = {"X-GitHub-Event": "issue_comment"}
+    headers = {"x-github-event": "issue_comment"}
     
     action = classify_user_action(payload, headers)
     assert action == "discussion_comment"
 
 def test_classify_user_action_unknown_event():
     payload = {"action": "some_action"}
-    headers = {"X-GitHub-Event": "unknown_event"}
+    headers = {"x-github-event": "unknown_event"}
     
     action = classify_user_action(payload, headers)
     assert action == "unknown"
