@@ -13,7 +13,12 @@ def lambda_handler(event, context):
     """
     try:
         payload = json.loads(event['body'])
-        diff_url = payload['pull_request']['diff_url']
+
+        if not is_actionable_event(payload):
+            return {
+                'statusCode': 200,
+                'body': 'Event not actionable, no further processing.'
+            }
 
         repo_handler = RepositoryHandler(connection_timeout=10.0)
         asyncio.run(
@@ -48,3 +53,13 @@ def lambda_handler(event, context):
             'statusCode': 500,
             'body': str(e)
         }
+
+
+def is_actionable_event(payload: dict) -> bool:
+    action = payload['action']
+    reviewers = [
+        reviewer['login'] 
+        for reviewer in payload['pull_request']['requested_reviewers']
+    ]
+    if action in ['review_requested'] and 'tgrafy' in reviewers:
+        return True
