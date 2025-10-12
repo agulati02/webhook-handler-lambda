@@ -8,6 +8,8 @@ import logging
 from .repo_handler import RepositoryHandler
 from .dto import UserAction, Event
 from .constants import AppConstants
+from .clients import get_sqs_client
+from .config import SQS_QUEUE_URL
 
 
 def lambda_handler(event, context):
@@ -18,7 +20,7 @@ def lambda_handler(event, context):
         payload = json.loads(event['body'])
         action = classify_user_action(payload, event['headers'])
 
-        print(f"Received event: {event['headers'].get('x-github-event', 'unknown')} with action: {action.value}")
+        logging.info(f"Received event: {event['headers'].get('x-github-event', 'unknown')} with action: {action.value}")
 
         if action == UserAction.REVIEW_REQUESTED:
             return handle_review_request(payload)
@@ -71,6 +73,15 @@ def classify_user_action(payload: dict, headers: dict) -> UserAction:
 
     return UserAction.UNKNOWN
 
+def push_to_sqs(message: dict):
+    sqs_client = get_sqs_client()
+    response = sqs_client.send_message(
+        QueueUrl=SQS_QUEUE_URL,
+        MessageBody=json.dumps(message)
+    )
+    logging.info(f"SQS message sent with ID: {response.get('MessageId')}")
+    return response
+
 def handle_review_request(payload: dict) -> dict:
     repo_handler = RepositoryHandler(connection_timeout=10.0)
     asyncio.run(
@@ -79,14 +90,14 @@ def handle_review_request(payload: dict) -> dict:
             installation_id=payload['installation']['id']
         )
     )
-    # TODO: Push to SQS for async processing
+    push_to_sqs(payload)
     return {
         'statusCode': 200,
         'body': 'PR review process initiated successfully.'
     }
 
 def handle_discussion_comment(payload: dict) -> dict:
-    # TODO: Push to SQS for async processing
+    push_to_sqs(payload)
     return {
         'statusCode': 200,
         'body': 'Discussion comment received. No action taken yet.'
