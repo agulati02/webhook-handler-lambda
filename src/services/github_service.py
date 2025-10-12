@@ -2,8 +2,8 @@ from httpx import AsyncClient
 from .token_manager import TokenManager
 
 
-class RepositoryHandler:
-    def __init__(self, connection_timeout: float = 10.0, ca_certs: str = None):
+class GitHubService:
+    def __init__(self, connection_timeout: float = 10.0, ca_certs: str = None) -> None:
         self.client = AsyncClient(
             timeout=connection_timeout, 
             verify=ca_certs if ca_certs else True,
@@ -15,11 +15,6 @@ class RepositoryHandler:
             }
         )
 
-    async def get_pr_diff(self, diff_url: str) -> str:
-        response = await self.client.get(diff_url, follow_redirects=True)
-        response.raise_for_status()
-        return response.text
-    
     async def post_greeting_comment(self, comments_url: str, installation_id: int) -> dict:
         jwt_token = TokenManager.get_jwt_token()
         access_token = TokenManager.get_installation_access_token(jwt_token, installation_id)

@@ -1,0 +1,2 @@
+from .issue_comment import handle_discussion_comment
+from .review_request import handle_review_request
