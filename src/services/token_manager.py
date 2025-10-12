@@ -1,8 +1,8 @@
 import jwt
 import requests
 from datetime import datetime, timedelta, timezone
-from .config import GITHUB_PRIVATE_KEY_PATH, CLIENT_ID, JWT_ALGORITHM, ENV
-from .clients import get_ssm_client
+from ..config import GITHUB_PRIVATE_KEY_PATH, CLIENT_ID, JWT_ALGORITHM, ENV
+from ..clients import get_ssm_client
 
 class TokenManager:
 
