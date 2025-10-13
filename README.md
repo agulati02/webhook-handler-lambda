@@ -2,4 +2,4 @@
 
 ### 1. High-level System Design (HLSD)
 
-<img src="./assets/hlsd.svg" alt="Description" />
+<img src="./assets/flow.svg" alt="Description" />
