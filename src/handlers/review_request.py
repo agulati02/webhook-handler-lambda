@@ -1,6 +1,7 @@
 import asyncio
 from ..bootstrap import push_to_sqs
 from ..services import GitHubService
+from ..dto import UserAction
 
 
 def handle_review_request(payload: dict) -> dict:
@@ -11,7 +12,7 @@ def handle_review_request(payload: dict) -> dict:
             installation_id=payload['installation']['id']
         )
     )
-    push_to_sqs(payload)
+    push_to_sqs({**payload, "trigger": UserAction.REVIEW_REQUESTED})
     return {
         'statusCode': 200,
         'body': 'PR review process initiated successfully.'
