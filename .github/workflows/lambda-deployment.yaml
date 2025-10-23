@@ -35,10 +35,10 @@ jobs:
         run: |
           if git diff --name-only HEAD^ HEAD | grep -q "requirements.txt"; then
             echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📦 Requirements.txt has changed - will update layer"
+            echo "> Requirements.txt has changed - will update layer"
           else
             echo "changed=false" >> $GITHUB_OUTPUT
-            echo "✅ Requirements.txt unchanged - skipping layer update"
+            echo "> Requirements.txt unchanged - skipping layer update"
           fi
 
       - name: Set up Python
@@ -52,7 +52,7 @@ jobs:
         if: steps.check-changes.outputs.changed == 'true'
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt -t python/
+          pip install -r requirements -t python/ --extra-index-url https://test.pypi.org/simple/
 
       - name: Create Lambda Layer package
         if: steps.check-changes.outputs.changed == 'true'
@@ -114,7 +114,7 @@ jobs:
       - name: Publish Lambda Layer
         id: publish-layer
         run: |
-          echo "📤 Publishing new layer version..."
+          echo "> Publishing new layer version..."
           LAYER_ARN=$(aws lambda publish-layer-version \
             --layer-name ${{ env.LAYER_NAME }} \
             --zip-file fileb://layer.zip \
@@ -125,11 +125,11 @@ jobs:
             --output text)
           
           echo "layer_arn=$LAYER_ARN" >> $GITHUB_OUTPUT
-          echo "✅ Published layer: $LAYER_ARN"
+          echo "> Published layer: $LAYER_ARN"
 
       - name: Update Lambda function layer
         run: |
-          echo "🔗 Attaching layer to Lambda function..."
+          echo "> Attaching layer to Lambda function..."
           aws lambda update-function-configuration \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --layers ${{ steps.publish-layer.outputs.layer_arn }} \
@@ -137,11 +137,11 @@ jobs:
 
       - name: Wait for layer update
         run: |
-          echo "⏳ Waiting for layer update to complete..."
+          echo "> Waiting for layer update to complete..."
           aws lambda wait function-updated \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --region ${{ env.AWS_REGION }}
-          echo "✅ Layer update completed"
+          echo "> Layer update completed"
 
   # Stage 4: Deploy Lambda Function Code
   deploy-function:
@@ -168,7 +168,7 @@ jobs:
 
       - name: Deploy function code
         run: |
-          echo "🚀 Deploying function code..."
+          echo "> Deploying function code..."
           aws lambda update-function-code \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --zip-file fileb://function.zip \
@@ -177,11 +177,11 @@ jobs:
 
       - name: Wait for deployment
         run: |
-          echo "⏳ Waiting for function update to complete..."
+          echo "> Waiting for function update to complete..."
           aws lambda wait function-updated \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --region ${{ env.AWS_REGION }}
-          echo "✅ Function deployment completed"
+          echo "> Function deployment completed"
 
   # Stage 5: Verify and Test
   verify:
@@ -199,7 +199,7 @@ jobs:
 
       - name: Check function state
         run: |
-          echo "🔍 Verifying deployment..."
+          echo "> Verifying deployment..."
           FUNCTION_STATUS=$(aws lambda get-function \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -209,13 +209,13 @@ jobs:
           echo "Function state: $FUNCTION_STATUS"
           
           if [ "$FUNCTION_STATUS" != "Active" ]; then
-            echo "❌ Error: Function is not in Active state"
+            echo "> Error: Function is not in Active state"
             exit 1
           fi
 
       - name: Get function details
         run: |
-          echo "📊 Function Details:"
+          echo "> Function Details:"
           aws lambda get-function \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -224,7 +224,7 @@ jobs:
 
       - name: Get latest layer info
         run: |
-          echo "📦 Layer Information:"
+          echo "> Layer Information:"
           aws lambda get-function \
             --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
             --region ${{ env.AWS_REGION }} \
@@ -233,7 +233,7 @@ jobs:
 
       - name: Deployment summary
         run: |
-          echo "✅ Deployment completed successfully!"
+          echo "> Deployment completed successfully!"
           echo "Function: ${{ env.LAMBDA_FUNCTION_NAME }}"
           echo "Region: ${{ env.AWS_REGION }}"
           echo "Timestamp: $(date)"
@@ -255,7 +255,7 @@ jobs:
 
       - name: Remove old layer versions
         run: |
-          echo "🧹 Cleaning up old layer versions (keeping last 3)..."
+          echo "> Cleaning up old layer versions (keeping last 3)..."
           
           VERSIONS=$(aws lambda list-layer-versions \
             --layer-name ${{ env.LAYER_NAME }} \
@@ -273,5 +273,5 @@ jobs:
                 --version-number $VERSION \
                 --region ${{ env.AWS_REGION }} || true
             done
-            echo "✅ Cleanup completed"
+            echo "> Cleanup completed"
           fi

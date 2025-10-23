@@ -2,13 +2,12 @@ import sys
 sys.path.append('/opt/site-packages')
 
 import json
-import asyncio
 import logging
-
+from typing import Any
+from commons.models.enums import UserAction  # type: ignore
 from .handlers import handle_review_request, handle_discussion_comment
-from .dto import UserAction, Event
-from .constants import AppConstants
-from .config import SQS_QUEUE_URL
+from .models.dto import Event
+from .models.constants import AppConstants
 
 
 class WebhookEventRouter:
@@ -17,7 +16,7 @@ class WebhookEventRouter:
         UserAction.DISCUSSION_COMMENT: handle_discussion_comment
     }
 
-    def _classify_user_action(self, payload: dict, headers: dict) -> UserAction:
+    def _classify_user_action(self, payload: dict[str, Any], headers: dict[str, Any]) -> UserAction:
         if headers.get('x-github-event') not in Event._value2member_map_:
             return UserAction.UNKNOWN
         
@@ -37,17 +36,20 @@ class WebhookEventRouter:
 
         return UserAction.UNKNOWN
     
-    def route_event(self, event: dict) -> dict:
+    def _default_handler(self, _payload: dict[str, Any]) -> dict[str, Any]:
+        return {
+            'statusCode': 200,
+            'body': 'Event not actionable'
+        }
+    
+    def route_event(self, event: dict[str, Any]) -> dict[str, Any]:
         payload = json.loads(event['body'])
         action = self._classify_user_action(payload, event['headers'])
         
-        handler = self.handlers.get(action, lambda x: {
-            'statusCode': 200,
-            'body': 'Event not actionable'
-        })
+        handler = self.handlers.get(action, self._default_handler)
         return handler(payload)
 
-def lambda_handler(event, context):
+def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Receives the GitHub webhook call and orchestrates the code review process  
     """
