@@ -20,11 +20,14 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
         aws_region_name=AWS_REGION_NAME,
         repo_private_key_path=SECRET_GITHUB_PRIVATE_KEY_PATH,
     )
+    db_username, db_password = tuple(get_secrets_manager(AWS_REGION_NAME).get_secrets(
+        secrets=[SECRET_DATABASE_USERNAME_PATH, SECRET_DATABASE_PASSWORD_PATH]
+    ))  # type: ignore
     with get_database_service(
         conn_string=DATABASE_CONNECTION_STRING,
         database_name=DATABASE_NAME,
-        username=get_secrets_manager(AWS_REGION_NAME).get_secret(SECRET_DATABASE_USERNAME_PATH),
-        password=get_secrets_manager(AWS_REGION_NAME).get_secret(SECRET_DATABASE_PASSWORD_PATH)
+        username=db_username,
+        password=db_password
     ) as db_client:
         start = time.time()
         response = db_client.query(
