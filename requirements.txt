@@ -5,4 +5,4 @@ requests
 cryptography
 pytest
 boto3>=1.40.51
-tgrafy-commons==0.2.5
+tgrafy-commons==0.2.6
