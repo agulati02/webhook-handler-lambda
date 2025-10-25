@@ -6,7 +6,8 @@ class Event(str, Enum):
     ISSUE_COMMENT = "issue_comment"
     UNKNOWN = "unknown"
 
-class UserAction(str, Enum):
-    REVIEW_REQUESTED = "review_requested"
-    DISCUSSION_COMMENT = "discussion_comment"
-    UNKNOWN = "unknown"    
+class EventStatus(str, Enum):
+    IN_QUEUE = "in_queue"
+    IN_REVIEW = "in_review"
+    COMPLETED = "completed"
+    EXCEPTION = "exception" 

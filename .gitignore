@@ -3,3 +3,5 @@ secrets
 .vscode
 *.pem
 *cache*
+database_username.txt
+database_password.txt
