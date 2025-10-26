@@ -5,5 +5,6 @@ PyJWT
 requests
 cryptography
 pytest
+mypy-boto3-sqs
 boto3>=1.40.51
 tgrafy-commons==0.2.9
