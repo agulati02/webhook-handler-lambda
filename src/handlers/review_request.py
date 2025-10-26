@@ -1,4 +1,5 @@
-# import time
+import time
+import logging
 from datetime import datetime, timezone
 from typing import Any
 from commons.utils.dependencies import get_repository_service, get_database_service, get_secrets_manager   # type: ignore
@@ -30,7 +31,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
         username=db_username,
         password=db_password
     ) as db_client:
-        # start = time.time()
+        start = time.time()
         response = db_client.query(
             collection=EVENTS_COLLECTION,
             filter={
@@ -42,33 +43,33 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
                 "_id": 1
             }
         )
-        # end = time.time()
-        # print(f"DB query time: {end - start} seconds")
+        end = time.time()
+        logging.info(f"DB query time: {end - start} seconds")
         if len(response) > 0:
-            # start = time.time()
+            start = time.time()
             repo_service.post_issue_comment(
                 comments_url=payload['pull_request']['comments_url'],
                 installation_id=payload['installation']['id'],
                 content="In the middle of another task regarding this PR, please wait for 5 minutes before requesting a new task.",
                 app_client_id=CLIENT_ID
             )
-            # end = time.time()
-            # print(f"Repository comment call: {end - start} seconds")
+            end = time.time()
+            logging.info(f"Repository comment call: {end - start} seconds")
             return {
                 'statusCode': 200,
                 'body': 'Another task in progress.'
             }
-        # start = time.time()
+        start = time.time()
         repo_service.post_issue_comment(
             comments_url=payload['pull_request']['comments_url'], 
             installation_id=payload['installation']['id'],
             content="Thanks for requesting a review!\nI'll get to it shortly. :nerd:",
             app_client_id=CLIENT_ID
         )
-        # end = time.time()
-        # print(f"Repository comment call: {end - start} seconds")
+        end = time.time()
+        logging.info(f"Repository comment call: {end - start} seconds")
         push_to_sqs({**payload, "trigger": UserAction.REVIEW_REQUESTED})
-        # start = time.time()
+        start = time.time()
         db_client.save(
             collection=EVENTS_COLLECTION,
             data={
@@ -80,8 +81,8 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
                 "timestamp": datetime.now(tz=timezone.utc)
             }
         )
-        # end = time.time()
-        # print(f"Database save call: {end - start} seconds")
+        end = time.time()
+        logging.info(f"Database save call: {end - start} seconds")
     return {
         'statusCode': 200,
         'body': 'PR review process initiated successfully.'
