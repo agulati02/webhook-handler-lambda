@@ -2,6 +2,7 @@ import sys
 sys.path.append('/opt/site-packages')
 
 import json
+import orjson
 import logging
 from typing import Any
 from commons.models.enums import UserAction  # type: ignore
@@ -43,7 +44,7 @@ class WebhookEventRouter:
         }
     
     def route_event(self, event: dict[str, Any]) -> dict[str, Any]:
-        payload = json.loads(event['body'])
+        payload = orjson.loads(event['body'])
         action = self._classify_user_action(payload, event['headers'])
         
         handler = self.handlers.get(action, self._default_handler)

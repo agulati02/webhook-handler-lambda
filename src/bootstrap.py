@@ -1,4 +1,4 @@
-import json
+import orjson
 import logging
 from typing import Any
 
@@ -11,7 +11,7 @@ def push_to_sqs(message: dict[str, Any]) -> None:
         sqs_client = get_sqs_client()   # type: ignore
         response: dict[str, Any] = sqs_client.send_message( # type: ignore
             QueueUrl=SQS_QUEUE_URL,
-            MessageBody=json.dumps(message)
+            MessageBody=orjson.dumps(message)
         )
         logging.info(f"SQS message sent with ID: {response["MessageId"]}")
     except KeyError as e:
