@@ -11,9 +11,8 @@ from .models.dto import Event
 from .models.constants import AppConstants
 
 
-# Configure logging with DEBUG level
+# Configure logging with INFO level
 logging.basicConfig(
-    level=logging.DEBUG,
     format='%(asctime)s | %(name)s | %(levelname)s | %(message)s'
 )
 

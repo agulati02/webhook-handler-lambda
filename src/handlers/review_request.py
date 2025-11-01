@@ -10,6 +10,9 @@ from ..bootstrap import push_to_sqs
 from ..models.dto import EventStatus
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
+
 def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
     if not (SECRET_GITHUB_PRIVATE_KEY_PATH and SECRET_DATABASE_USERNAME_PATH and SECRET_DATABASE_PASSWORD_PATH and DATABASE_NAME and EVENTS_COLLECTION):
         print(
@@ -45,7 +48,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
         end = time.time()
-        logging.info(f"DB query time: {end - start} seconds")
+        logger.info(f"DB query time: {end - start} seconds")
         if len(response) > 0:
             start = time.time()
             repo_service.post_issue_comment(
@@ -55,7 +58,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
                 app_client_id=CLIENT_ID
             )
             end = time.time()
-            logging.info(f"Repository comment call: {end - start} seconds")
+            logger.info(f"Repository comment call: {end - start} seconds")
             return {
                 'statusCode': 200,
                 'body': 'Another task in progress.'
@@ -68,7 +71,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
             app_client_id=CLIENT_ID
         )
         end = time.time()
-        logging.info(f"Repository comment call: {end - start} seconds")
+        logger.info(f"Repository comment call: {end - start} seconds")
         trigger_id = str(uuid4())
         push_to_sqs({**payload, "trigger": UserAction.REVIEW_REQUESTED, "trigger_id": trigger_id})
         start = time.time()
@@ -85,7 +88,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
         end = time.time()
-        logging.info(f"Database save call: {end - start} seconds")
+        logger.info(f"Database save call: {end - start} seconds")
     return {
         'statusCode': 200,
         'body': 'PR review process initiated successfully.'
