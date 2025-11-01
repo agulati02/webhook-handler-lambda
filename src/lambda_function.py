@@ -11,10 +11,8 @@ from .models.dto import Event
 from .models.constants import AppConstants
 
 
-# Configure logging with INFO level
-logging.basicConfig(
-    format='%(asctime)s | %(name)s | %(levelname)s | %(message)s'
-)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class WebhookEventRouter:
     handlers = {
@@ -42,26 +40,25 @@ class WebhookEventRouter:
 
         return UserAction.UNKNOWN
     
-    def _default_handler(self, _payload: dict[str, Any]) -> dict[str, Any]:
+    def _default_handler(self, payload: dict[str, Any], request_id: str) -> dict[str, Any]:
         return {
             'statusCode': 200,
             'body': 'Event not actionable'
         }
     
-    def route_event(self, event: dict[str, Any]) -> dict[str, Any]:
+    def route_event(self, event: dict[str, Any], request_id: str) -> dict[str, Any]:
         payload = orjson.loads(event['body'])
         action = self._classify_user_action(payload, event['headers'])
         
         handler = self.handlers.get(action, self._default_handler)
-        return handler(payload)
+        return handler(payload=payload, request_id=request_id)
 
 def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
-    """
-    Receives the GitHub webhook call and orchestrates the code review process  
-    """
+    """Receives the GitHub webhook call and orchestrates the code review process"""
     try:
+        request_id = context.request_id
         webhook_handler = WebhookEventRouter()
-        return webhook_handler.route_event(event)
+        return webhook_handler.route_event(event, request_id)
     
     except KeyError as e:
         logging.error(f"KeyError: {e}")

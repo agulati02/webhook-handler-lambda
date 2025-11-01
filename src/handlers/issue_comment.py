@@ -1,6 +1,5 @@
 import time
 import logging
-from uuid import uuid4
 from typing import Any
 from datetime import datetime, timezone
 from commons.models.enums import UserAction # type: ignore
@@ -13,7 +12,7 @@ from ..config import SECRET_GITHUB_PRIVATE_KEY_PATH, DATABASE_CONNECTION_STRING,
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
-def handle_discussion_comment(payload: dict[str, Any]) -> dict[str, Any]:
+def handle_discussion_comment(payload: dict[str, Any], request_id: str) -> dict[str, Any]:
     if not (SECRET_GITHUB_PRIVATE_KEY_PATH and SECRET_DATABASE_USERNAME_PATH and SECRET_DATABASE_PASSWORD_PATH and DATABASE_NAME and EVENTS_COLLECTION):
         print(
             "GITHUB_PRIVATE_KEY_PATH / SECRET_DATABASE_USERNAME_PATH / SECRET_DATABASE_PASSWORD_PATH / DATABASE_NAME / EVENTS_COLLECTION not set. Cannot proceed with review request handling."
@@ -52,7 +51,7 @@ def handle_discussion_comment(payload: dict[str, Any]) -> dict[str, Any]:
             repo_service.post_issue_comment(
                 comments_url=payload['issue']['comments_url'],
                 installation_id=payload['installation']['id'],
-                content="In the middle of another task regarding this PR, please wait for 5 minutes before requesting a new task.",
+                content=f"@{payload['issue']['user']['login']} In the middle of another task regarding this PR, please wait for 5 minutes before requesting a new task.",
                 app_client_id=CLIENT_ID
             )
             end = time.time()
@@ -61,8 +60,7 @@ def handle_discussion_comment(payload: dict[str, Any]) -> dict[str, Any]:
                 'statusCode': 200,
                 'body': 'Another task in progress.'
             }
-        push_to_sqs({**payload, "trigger": UserAction.DISCUSSION_COMMENT})
-        trigger_id = str(uuid4())
+        push_to_sqs({**payload, "trigger": UserAction.DISCUSSION_COMMENT, "trigger_id": request_id})
         start = time.time()
         db_client.save(
             collection=EVENTS_COLLECTION,
@@ -72,7 +70,7 @@ def handle_discussion_comment(payload: dict[str, Any]) -> dict[str, Any]:
                 "pull_request_url": payload['issue']['pull_request']['url'],
                 "status": EventStatus.IN_QUEUE,
                 "event": UserAction.DISCUSSION_COMMENT,
-                "trigger_id": trigger_id,
+                "trigger_id": request_id,
                 "timestamp": datetime.now(tz=timezone.utc)
             }
         )

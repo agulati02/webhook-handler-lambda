@@ -2,7 +2,6 @@ import time
 import logging
 from datetime import datetime, timezone
 from typing import Any
-from uuid import uuid4
 from commons.utils.dependencies import get_repository_service, get_database_service, get_secrets_manager   # type: ignore
 from commons.models.enums import UserAction  # type: ignore
 from ..config import AWS_REGION_NAME, SECRET_GITHUB_PRIVATE_KEY_PATH, CLIENT_ID, SECRET_DATABASE_USERNAME_PATH, SECRET_DATABASE_PASSWORD_PATH, DATABASE_CONNECTION_STRING, DATABASE_NAME, EVENTS_COLLECTION
@@ -13,7 +12,7 @@ from ..models.dto import EventStatus
 logger = logging.getLogger(__name__)
 logger.setLevel(level=logging.INFO)
 
-def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
+def handle_review_request(payload: dict[str, Any], request_id: str) -> dict[str, Any]:
     if not (SECRET_GITHUB_PRIVATE_KEY_PATH and SECRET_DATABASE_USERNAME_PATH and SECRET_DATABASE_PASSWORD_PATH and DATABASE_NAME and EVENTS_COLLECTION):
         print(
             "GITHUB_PRIVATE_KEY_PATH / SECRET_DATABASE_USERNAME_PATH / SECRET_DATABASE_PASSWORD_PATH / DATABASE_NAME / EVENTS_COLLECTION not set. Cannot proceed with review request handling."
@@ -72,8 +71,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
         )
         end = time.time()
         logger.info(f"Repository comment call: {end - start} seconds")
-        trigger_id = str(uuid4())
-        push_to_sqs({**payload, "trigger": UserAction.REVIEW_REQUESTED, "trigger_id": trigger_id})
+        push_to_sqs({**payload, "trigger": UserAction.REVIEW_REQUESTED, "trigger_id": request_id})
         start = time.time()
         db_client.save(
             collection=EVENTS_COLLECTION,
@@ -83,7 +81,7 @@ def handle_review_request(payload: dict[str, Any]) -> dict[str, Any]:
                 "pull_request_url": payload['pull_request']['url'],
                 "status": EventStatus.IN_QUEUE,
                 "event": UserAction.REVIEW_REQUESTED,
-                "trigger_id": trigger_id,
+                "trigger_id": request_id,
                 "timestamp": datetime.now(tz=timezone.utc)
             }
         )
