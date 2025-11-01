@@ -5,6 +5,7 @@ import json
 import orjson
 import logging
 from typing import Any
+from aws_lambda_powertools.utilities.typing import LambdaContext
 from commons.models.enums import UserAction  # type: ignore
 from .handlers import handle_review_request, handle_discussion_comment
 from .models.dto import Event
@@ -53,10 +54,10 @@ class WebhookEventRouter:
         handler = self.handlers.get(action, self._default_handler)
         return handler(payload=payload, request_id=request_id)
 
-def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
+def lambda_handler(event: dict[str, Any], context: LambdaContext) -> dict[str, Any]:
     """Receives the GitHub webhook call and orchestrates the code review process"""
     try:
-        request_id = context.request_id
+        request_id = context.aws_request_id
         webhook_handler = WebhookEventRouter()
         return webhook_handler.route_event(event, request_id)
     
